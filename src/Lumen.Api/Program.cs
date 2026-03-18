@@ -1,4 +1,7 @@
 
+using Lumen.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+
 namespace Lumen.Api
 {
     public class Program
@@ -12,6 +15,9 @@ namespace Lumen.Api
             builder.Services.AddControllers();
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
+
+            builder.Services.AddDbContext<LumenDbContext>(options =>
+                options.UseSqlite("Data Source=lumen.db"));
 
             builder.Services.AddSwaggerGen();
 
@@ -29,7 +35,6 @@ namespace Lumen.Api
             app.UseHttpsRedirection();
 
             app.UseAuthorization();
-
 
             app.MapControllers();
 
