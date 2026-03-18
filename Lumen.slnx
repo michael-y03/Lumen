@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/Lumen.Api/Lumen.Api.csproj" />
+  <Project Path="src/Lumen.Application/Lumen.Application.csproj" Id="c4077d58-e859-44ea-9a29-8c9b5c5fe63d" />
+  <Project Path="src/Lumen.Domain/Lumen.Domain.csproj" Id="1ac37dc2-19aa-4086-a760-ee057547b522" />
+  <Project Path="src/Lumen.Infrastructure/Lumen.Infrastructure.csproj" Id="b9d2dc12-6076-40cd-b8f7-4875b7bf3996" />
+  <Project Path="tests/Lumen.Tests/Lumen.Tests.csproj" Id="d66c5bf1-f6e9-42bc-bdee-82940b13c1e6" />
+</Solution>
