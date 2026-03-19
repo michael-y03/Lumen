@@ -361,3 +361,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Lumen runtime data
+src/Lumen.Api/storage/
+src/Lumen.Api/lumen.db
+src/Lumen.Api/lumen.db-shm
+src/Lumen.Api/lumen.db-wal

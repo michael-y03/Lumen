@@ -1,5 +1,7 @@
-
+using Lumen.Application.Services;
 using Lumen.Infrastructure;
+using Lumen.Infrastructure.Services;
+using Lumen.Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lumen.Api
@@ -10,32 +12,23 @@ namespace Lumen.Api
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
-
             builder.Services.AddControllers();
-            // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-            builder.Services.AddOpenApi();
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen();
 
             builder.Services.AddDbContext<LumenDbContext>(options =>
                 options.UseSqlite("Data Source=lumen.db"));
 
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddScoped<IPhotoService, PhotoService>();
+            builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 
             var app = builder.Build();
 
             app.UseSwagger();
             app.UseSwaggerUI();
 
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.MapOpenApi();
-            }
-
             app.UseHttpsRedirection();
-
             app.UseAuthorization();
-
             app.MapControllers();
 
             app.Run();
