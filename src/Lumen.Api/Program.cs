@@ -2,6 +2,7 @@ using Lumen.Application.Services;
 using Lumen.Infrastructure;
 using Lumen.Infrastructure.Services;
 using Lumen.Infrastructure.Storage;
+using Lumen.Infrastructure.Metadata;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lumen.Api
@@ -21,6 +22,8 @@ namespace Lumen.Api
 
             builder.Services.AddScoped<IPhotoService, PhotoService>();
             builder.Services.AddScoped<IFileStorageService, FileStorageService>();
+            builder.Services.AddScoped<IMetadataExtractor, ExifMetadataExtractor>();
+            builder.Services.AddScoped<IThumbnailService, ThumbnailService>();
 
             var app = builder.Build();
 
