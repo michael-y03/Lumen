@@ -1,4 +1,5 @@
 ﻿using Lumen.Application.Dtos;
+using Lumen.Application.Models;
 using Lumen.Application.Services;
 using Lumen.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -74,12 +75,22 @@ namespace Lumen.Infrastructure.Services
             return MapPhotoToDto(photo);
         }
 
-        public async Task<List<PhotoDto>> GetPhotosAsync()
+        public async Task<PagedResult<PhotoDto>> GetPhotosAsync(int page, int pageSize)
         {
-            List<Photo> photos = await _dbContext.Photos.OrderByDescending(p => p.DateImported).ToListAsync();
-            List<PhotoDto> photoDtos = photos.Select(MapPhotoToDto).ToList();
+            var photoQuery = _dbContext.Photos.OrderByDescending(p => p.DateImported);
+            int totalCount = await photoQuery.CountAsync();
+            int startIndex = (page - 1) * pageSize;
 
-            return photoDtos;
+            List<Photo> pagedPhotos = await photoQuery.Skip(startIndex).Take(pageSize).ToListAsync();
+            List<PhotoDto> photoDtos = pagedPhotos.Select(MapPhotoToDto).ToList();
+
+            return new PagedResult<PhotoDto> 
+            { 
+                Items = photoDtos,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            };
         }
 
         private PhotoDto MapPhotoToDto(Photo photo)

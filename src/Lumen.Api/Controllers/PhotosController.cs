@@ -1,4 +1,5 @@
 ﻿using Lumen.Application.Dtos;
+using Lumen.Application.Models;
 using Lumen.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -40,9 +41,13 @@ namespace Lumen.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<PhotoDto>>> GetPhotos()
+        public async Task<ActionResult<PagedResult<PhotoDto>>> GetPhotos(int page=1, int pageSize=20)
         {
-            var photos = await _photoService.GetPhotosAsync();
+            if (page <= 0 || pageSize <= 0)
+            {
+                return BadRequest("Page and page size must be greater than zero.");
+            }
+            var photos = await _photoService.GetPhotosAsync(page, pageSize);
             return Ok(photos);
         }
     }

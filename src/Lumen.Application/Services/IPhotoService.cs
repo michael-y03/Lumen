@@ -1,5 +1,6 @@
 ﻿
 using Lumen.Application.Dtos;
+using Lumen.Application.Models;
 
 namespace Lumen.Application.Services
 {
@@ -7,6 +8,6 @@ namespace Lumen.Application.Services
     {
         Task<PhotoDto> UploadPhotoAsync(Stream fileStream, string fileName, long fileSize);
         Task<PhotoDto?> GetPhotoByIdAsync(int id);
-        Task<List<PhotoDto>> GetPhotosAsync();
+        Task<PagedResult<PhotoDto>> GetPhotosAsync(int page, int pageSize);
     }
 }
