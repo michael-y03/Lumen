@@ -29,5 +29,21 @@ namespace Lumen.Api.Controllers
 
             return StatusCode(StatusCodes.Status201Created, photo);
         }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<PhotoDto>> GetPhotoById(int id)
+        {
+            var photo = await _photoService.GetPhotoByIdAsync(id);
+            if (photo is null)
+                return NotFound("Photo not found.");
+            return Ok(photo);
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<List<PhotoDto>>> GetPhotos()
+        {
+            var photos = await _photoService.GetPhotosAsync();
+            return Ok(photos);
+        }
     }
 }

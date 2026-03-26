@@ -1,6 +1,7 @@
 ﻿using Lumen.Application.Dtos;
 using Lumen.Application.Services;
 using Lumen.Domain;
+using Microsoft.EntityFrameworkCore;
 
 namespace Lumen.Infrastructure.Services
 {
@@ -62,6 +63,27 @@ namespace Lumen.Infrastructure.Services
             _dbContext.Photos.Add(photo);
             await _dbContext.SaveChangesAsync();
 
+            return MapPhotoToDto(photo);
+        }
+
+        public async Task<PhotoDto?> GetPhotoByIdAsync(int id)
+        {
+            var photo = await _dbContext.Photos.FindAsync(id);
+            if (photo is null)
+                return null;
+            return MapPhotoToDto(photo);
+        }
+
+        public async Task<List<PhotoDto>> GetPhotosAsync()
+        {
+            List<Photo> photos = await _dbContext.Photos.OrderByDescending(p => p.DateImported).ToListAsync();
+            List<PhotoDto> photoDtos = photos.Select(MapPhotoToDto).ToList();
+
+            return photoDtos;
+        }
+
+        private PhotoDto MapPhotoToDto(Photo photo)
+        {
             return new PhotoDto
             {
                 Id = photo.Id,
