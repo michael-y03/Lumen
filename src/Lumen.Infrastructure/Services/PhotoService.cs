@@ -93,6 +93,18 @@ namespace Lumen.Infrastructure.Services
             };
         }
 
+        public async Task<string?> GetPhotoFilePathByIdAsync(int id)
+        {
+            var photo = await _dbContext.Photos.FindAsync(id);
+            return photo?.StoredFilePath;
+        }
+
+        public async Task<string?> GetPhotoThumbnailPathByIdAsync(int id)
+        {
+            var photo = await _dbContext.Photos.FindAsync(id);
+            return photo?.ThumbnailPath;
+        }
+
         private PhotoDto MapPhotoToDto(Photo photo)
         {
             return new PhotoDto

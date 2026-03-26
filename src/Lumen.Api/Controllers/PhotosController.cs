@@ -2,6 +2,7 @@
 using Lumen.Application.Models;
 using Lumen.Application.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
 
 namespace Lumen.Api.Controllers
 {
@@ -41,7 +42,7 @@ namespace Lumen.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<PagedResult<PhotoDto>>> GetPhotos(int page=1, int pageSize=20)
+        public async Task<ActionResult<PagedResult<PhotoDto>>> GetPhotos(int page = 1, int pageSize = 20)
         {
             if (page <= 0 || pageSize <= 0)
             {
@@ -49,6 +50,34 @@ namespace Lumen.Api.Controllers
             }
             var photos = await _photoService.GetPhotosAsync(page, pageSize);
             return Ok(photos);
+        }
+
+        [HttpGet("{id}/file")]
+        public async Task<IActionResult> GetPhotoFile(int id)
+        {
+            var filePath = await _photoService.GetPhotoFilePathByIdAsync(id);
+            if (filePath is null)
+                return NotFound("Photo not found.");
+            string absoluteFilePath = Path.GetFullPath(filePath);
+            if (!System.IO.File.Exists(absoluteFilePath))
+                return NotFound("Photo file not found on disk.");
+            var provider = new FileExtensionContentTypeProvider();
+            if (!provider.TryGetContentType(absoluteFilePath, out string? contentType))
+                contentType = "application/octet-stream";
+            return PhysicalFile(absoluteFilePath, contentType);
+        }
+
+        [HttpGet("{id}/thumb")]
+        public async Task<IActionResult> GetPhotoThumb(int id)
+        {
+            var filePath = await _photoService.GetPhotoThumbnailPathByIdAsync(id);
+            if (filePath is null)
+                return NotFound("Photo not found.");
+            string absoluteFilePath = Path.GetFullPath(filePath);
+            if (!System.IO.File.Exists(absoluteFilePath))
+                return NotFound("Photo file not found on disk.");
+            string contentType = "image/jpeg";
+            return PhysicalFile(absoluteFilePath, contentType);
         }
     }
 }
