@@ -11,5 +11,7 @@ namespace Lumen.Application.Services
         Task<PagedResult<PhotoDto>> GetPhotosAsync(int page, int pageSize);
         Task<string?> GetPhotoFilePathByIdAsync(int id);
         Task<string?> GetPhotoThumbnailPathByIdAsync(int id);
+        Task<bool> DeletePhotoByIdAsync(int id);
+        Task<PhotoDto?> UpdatePhotoByIdAsync(int id, PhotoUpdateRequest request);
     }
 }

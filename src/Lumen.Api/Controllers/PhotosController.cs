@@ -79,5 +79,23 @@ namespace Lumen.Api.Controllers
             string contentType = "image/jpeg";
             return PhysicalFile(absoluteFilePath, contentType);
         }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeletePhoto(int id)
+        {
+            bool success = await _photoService.DeletePhotoByIdAsync(id);
+            if (success)
+                return NoContent();
+            return NotFound("Photo not found.");
+        }
+
+        [HttpPut("{id}")]
+        public async Task<ActionResult<PhotoDto>> UpdatePhoto(int id, [FromBody] PhotoUpdateRequest request)
+        {
+            var updatedPhoto = await _photoService.UpdatePhotoByIdAsync(id, request);
+            if (updatedPhoto is null)
+                return NotFound("Photo not found.");
+            return Ok(updatedPhoto);
+        }
     }
 }

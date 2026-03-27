@@ -105,6 +105,38 @@ namespace Lumen.Infrastructure.Services
             return photo?.ThumbnailPath;
         }
 
+        public async Task<bool> DeletePhotoByIdAsync(int id)
+        {
+            var photo = await _dbContext.Photos.FindAsync(id);
+            if (photo is null)
+                return false;
+            string absoluteFilePath = Path.GetFullPath(photo.StoredFilePath);
+            if (File.Exists(absoluteFilePath))
+                File.Delete(absoluteFilePath);
+            if (photo.ThumbnailPath is not null)
+            {
+                string absoluteThumbnailPath = Path.GetFullPath(photo.ThumbnailPath);
+                if (File.Exists(absoluteThumbnailPath))
+                    File.Delete(absoluteThumbnailPath);
+            }
+            _dbContext.Photos.Remove(photo);
+            await _dbContext.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<PhotoDto?> UpdatePhotoByIdAsync(int id, PhotoUpdateRequest request)
+        {
+            var photo = await _dbContext.Photos.FindAsync(id);
+            if (photo is null)
+                return null;
+            photo.Description = request.Description;
+            photo.DateTaken = request.DateTaken;
+
+            await _dbContext.SaveChangesAsync();
+            PhotoDto updatedPhoto = MapPhotoToDto(photo);
+            return updatedPhoto;
+        }
+
         private PhotoDto MapPhotoToDto(Photo photo)
         {
             return new PhotoDto
