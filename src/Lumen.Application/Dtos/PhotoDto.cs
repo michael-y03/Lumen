@@ -22,5 +22,6 @@ namespace Lumen.Application.Dtos
         public string? FocalLength { get; set; }
         public double? GpsLatitude { get; set; }
         public double? GpsLongitude { get; set; }
+        public List<string> Tags { get; set; } = [];
     }
 }

@@ -69,15 +69,24 @@ namespace Lumen.Infrastructure.Services
 
         public async Task<PhotoDto?> GetPhotoByIdAsync(int id)
         {
-            var photo = await _dbContext.Photos.FindAsync(id);
+            var photo = await _dbContext.Photos
+                .Include(p => p.Tags)
+                .FirstOrDefaultAsync(p => p.Id == id);
             if (photo is null)
                 return null;
             return MapPhotoToDto(photo);
         }
 
-        public async Task<PagedResult<PhotoDto>> GetPhotosAsync(int page, int pageSize)
+        public async Task<PagedResult<PhotoDto>> GetPhotosAsync(int page, int pageSize, string? tag = null)
         {
-            var photoQuery = _dbContext.Photos.OrderByDescending(p => p.DateImported);
+            IQueryable<Photo> photoQuery = _dbContext.Photos.Include(p => p.Tags);
+            if ((!string.IsNullOrWhiteSpace(tag)))
+            {
+                string normalizedTag = tag.Trim().ToLower();
+                photoQuery = photoQuery.Where(p => p.Tags.Any(t => t.Name == normalizedTag));
+            }
+            photoQuery = photoQuery.OrderByDescending(p => p.DateImported);
+
             int totalCount = await photoQuery.CountAsync();
             int startIndex = (page - 1) * pageSize;
 
@@ -126,7 +135,9 @@ namespace Lumen.Infrastructure.Services
 
         public async Task<PhotoDto?> UpdatePhotoByIdAsync(int id, PhotoUpdateRequest request)
         {
-            var photo = await _dbContext.Photos.FindAsync(id);
+            var photo = await _dbContext.Photos
+                .Include(p => p.Tags)
+                .FirstOrDefaultAsync(p => p.Id == id);
             if (photo is null)
                 return null;
             photo.Description = request.Description;
@@ -135,6 +146,78 @@ namespace Lumen.Infrastructure.Services
             await _dbContext.SaveChangesAsync();
             PhotoDto updatedPhoto = MapPhotoToDto(photo);
             return updatedPhoto;
+        }
+
+        public async Task<PhotoDto?> AddTagToPhotoByIdAsync(int id, AddTagRequest request)
+        {
+            var photo = await _dbContext.Photos
+                .Include(p => p.Tags)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            string tag = request.TagName.Trim().ToLower();
+
+            if (photo is null || tag.Length == 0)
+                return null;
+
+            Tag? existingTag = await _dbContext.Tags
+                .FirstOrDefaultAsync(t => t.Name == tag);
+
+            if (existingTag is not null)
+            {
+                if (photo.Tags.Any(t => t.Id == existingTag.Id))
+                    return MapPhotoToDto(photo);
+
+                photo.Tags.Add(existingTag);
+            }
+            else
+            {
+                Tag newTag = new Tag { Name = tag };
+                photo.Tags.Add(newTag);
+            }
+
+            await _dbContext.SaveChangesAsync();
+            return MapPhotoToDto(photo);
+        }
+
+        public async Task<PhotoDto?> RemoveTagFromPhotoByIdAsync(int id, string tagName)
+        {
+            var photo = await _dbContext.Photos
+                .Include(p => p.Tags)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            string tag = tagName.Trim().ToLower();
+
+            if (photo is null || tag.Length == 0)
+                return null;
+
+            var tagToRemove = photo.Tags.FirstOrDefault(t => t.Name == tag);
+
+            if (tagToRemove is not null)
+            {
+                photo.Tags.Remove(tagToRemove);
+                await _dbContext.SaveChangesAsync();
+
+                var remainingPhotosWithTag = await _dbContext.Photos.AnyAsync(p => p.Tags.Any(t => t.Id == tagToRemove.Id));
+                if (!remainingPhotosWithTag)
+                {
+                    _dbContext.Tags.Remove(tagToRemove);
+                    await _dbContext.SaveChangesAsync();
+                }
+            }
+            return MapPhotoToDto(photo);
+        }
+
+        public async Task<List<TagDto>> GetTagsAsync()
+        {
+            var tags = await _dbContext.Tags
+                .Include(t => t.Photos)
+                .ToListAsync();
+
+            return tags.Select(t => new TagDto 
+            { 
+                Name = t.Name, 
+                PhotoCount = t.Photos.Count 
+            }).OrderBy(t => t.Name).ToList();
         }
 
         private PhotoDto MapPhotoToDto(Photo photo)
@@ -159,7 +242,8 @@ namespace Lumen.Infrastructure.Services
                 Aperture = photo.Aperture,
                 FocalLength = photo.FocalLength,
                 GpsLatitude = photo.GpsLatitude,
-                GpsLongitude = photo.GpsLongitude
+                GpsLongitude = photo.GpsLongitude,
+                Tags = photo.Tags.Select(t => t.Name).ToList()
             };
         }
     }

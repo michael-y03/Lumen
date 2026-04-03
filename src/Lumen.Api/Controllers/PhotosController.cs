@@ -42,13 +42,13 @@ namespace Lumen.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<PagedResult<PhotoDto>>> GetPhotos(int page = 1, int pageSize = 20)
+        public async Task<ActionResult<PagedResult<PhotoDto>>> GetPhotos(int page = 1, int pageSize = 20, string? tag = null)
         {
             if (page <= 0 || pageSize <= 0)
             {
                 return BadRequest("Page and page size must be greater than zero.");
             }
-            var photos = await _photoService.GetPhotosAsync(page, pageSize);
+            var photos = await _photoService.GetPhotosAsync(page, pageSize, tag);
             return Ok(photos);
         }
 
@@ -96,6 +96,37 @@ namespace Lumen.Api.Controllers
             if (updatedPhoto is null)
                 return NotFound("Photo not found.");
             return Ok(updatedPhoto);
+        }
+
+        [HttpPost("{id}/tags")]
+        public async Task<ActionResult<PhotoDto>> AddTagToPhoto(int id, [FromBody] AddTagRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.TagName))
+                return BadRequest("Tag name cannot be empty.");
+
+            var updatedPhoto = await _photoService.AddTagToPhotoByIdAsync(id, request);
+            if (updatedPhoto is null)
+                return NotFound("Photo not found.");
+
+            return Ok(updatedPhoto);
+        }
+
+        [HttpDelete("{id}/tags/{tagName}")]
+        public async Task<ActionResult<PhotoDto>> RemoveTagFromPhoto(int id, string tagName)
+        {
+            if (string.IsNullOrWhiteSpace(tagName))
+                return BadRequest("Tag name cannot be empty.");
+            var updatedPhoto = await _photoService.RemoveTagFromPhotoByIdAsync(id, tagName);
+            if (updatedPhoto is null)
+                return NotFound("Photo not found.");
+            return Ok(updatedPhoto);
+        }
+
+        [HttpGet("tags")]
+        public async Task<ActionResult<List<TagDto>>> GetTags()
+        {
+            var tags = await _photoService.GetTagsAsync();
+            return Ok(tags);
         }
     }
 }
