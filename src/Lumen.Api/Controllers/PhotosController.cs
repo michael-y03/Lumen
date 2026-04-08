@@ -42,13 +42,13 @@ namespace Lumen.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<PagedResult<PhotoDto>>> GetPhotos(int page = 1, int pageSize = 20, string? tag = null)
+        public async Task<ActionResult<PagedResult<PhotoDto>>> GetPhotos(int page = 1, int pageSize = 20, string? tag = null, string? camera = null, DateTime? from = null, DateTime? to = null, string? q = null, string? sort = "dateImported", string? order = "desc")
         {
             if (page <= 0 || pageSize <= 0)
             {
                 return BadRequest("Page and page size must be greater than zero.");
             }
-            var photos = await _photoService.GetPhotosAsync(page, pageSize, tag);
+            var photos = await _photoService.GetPhotosAsync(page, pageSize, tag, camera, from, to, q, sort, order);
             return Ok(photos);
         }
 

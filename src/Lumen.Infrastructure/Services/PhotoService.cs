@@ -77,7 +77,7 @@ namespace Lumen.Infrastructure.Services
             return MapPhotoToDto(photo);
         }
 
-        public async Task<PagedResult<PhotoDto>> GetPhotosAsync(int page, int pageSize, string? tag = null)
+        public async Task<PagedResult<PhotoDto>> GetPhotosAsync(int page, int pageSize, string? tag = null, string? camera = null, DateTime? from = null, DateTime? to = null, string? q = null, string? sort = "dateImported", string? order = "desc")
         {
             IQueryable<Photo> photoQuery = _dbContext.Photos.Include(p => p.Tags);
             if ((!string.IsNullOrWhiteSpace(tag)))
@@ -85,7 +85,48 @@ namespace Lumen.Infrastructure.Services
                 string normalizedTag = tag.Trim().ToLower();
                 photoQuery = photoQuery.Where(p => p.Tags.Any(t => t.Name == normalizedTag));
             }
-            photoQuery = photoQuery.OrderByDescending(p => p.DateImported);
+            if ((!string.IsNullOrWhiteSpace(camera)))
+            {
+                string normalizedCamera = camera.Trim();
+                photoQuery = photoQuery.Where(p => p.CameraModel == normalizedCamera);
+            }
+            if ((from is not null))
+            {
+                photoQuery = photoQuery.Where(p => p.DateTaken >= from);
+            }
+            if ((to is not null))
+            {
+                photoQuery = photoQuery.Where(p => p.DateTaken <= to);
+            }
+            if (!string.IsNullOrWhiteSpace(q))
+            {
+                string normalizedQ = q.Trim().ToLower();
+                photoQuery = photoQuery.Where(p => p.OriginalFileName.ToLower().Contains(normalizedQ) || (p.Description != null && p.Description.ToLower().Contains(normalizedQ)) || p.Tags.Any(t => t.Name.ToLower().Contains(normalizedQ)));
+            }
+
+            if (!string.IsNullOrWhiteSpace(sort))
+            {
+                if (!string.IsNullOrWhiteSpace(order) && order.Equals("asc"))
+                {
+                    photoQuery = sort switch
+                    {
+                        "dateImported" => photoQuery.OrderBy(p => p.DateImported),
+                        "dateTaken" => photoQuery.OrderBy(p => p.DateTaken),
+                        "fileName" => photoQuery.OrderBy(p => p.OriginalFileName),
+                        _ => photoQuery.OrderBy(p => p.DateImported),
+                    };
+                }
+                else
+                {
+                    photoQuery = sort switch
+                    {
+                        "dateImported" => photoQuery.OrderByDescending(p => p.DateImported),
+                        "dateTaken" => photoQuery.OrderByDescending(p => p.DateTaken),
+                        "fileName" => photoQuery.OrderByDescending(p => p.OriginalFileName),
+                        _ => photoQuery.OrderByDescending(p => p.DateImported),
+                    };
+                }
+            }
 
             int totalCount = await photoQuery.CountAsync();
             int startIndex = (page - 1) * pageSize;

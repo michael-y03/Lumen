@@ -8,7 +8,7 @@ namespace Lumen.Application.Services
     {
         Task<PhotoDto> UploadPhotoAsync(Stream fileStream, string fileName, long fileSize);
         Task<PhotoDto?> GetPhotoByIdAsync(int id);
-        Task<PagedResult<PhotoDto>> GetPhotosAsync(int page, int pageSize, string? tag = null);
+        Task<PagedResult<PhotoDto>> GetPhotosAsync(int page, int pageSize, string? tag = null, string? camera = null, DateTime? from = null, DateTime? to = null, string? q = null, string? sort = "dateImported", string? order = "desc");
         Task<string?> GetPhotoFilePathByIdAsync(int id);
         Task<string?> GetPhotoThumbnailPathByIdAsync(int id);
         Task<bool> DeletePhotoByIdAsync(int id);
