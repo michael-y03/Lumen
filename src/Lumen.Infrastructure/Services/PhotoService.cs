@@ -25,7 +25,7 @@ namespace Lumen.Infrastructure.Services
             _thumbnailService = thumbnailService;
         }
 
-        public async Task<PhotoDto> UploadPhotoAsync(Stream fileStream, string fileName, long fileSize)
+        public async Task<PhotoDto> UploadPhotoAsync(Stream fileStream, string fileName, long fileSize, string contentType)
         {
             var (storedPath, fileHash) = await _fileStorageService.SavePhotoAsync(fileStream, fileName);
 
@@ -40,6 +40,7 @@ namespace Lumen.Infrastructure.Services
             {
                 OriginalFileName = fileName,
                 FileExtension = Path.GetExtension(fileName),
+                MimeType = contentType,
                 StoredFilePath = storedPath,
                 ThumbnailPath = thumbnailPath,
                 FileSizeBytes = fileSize,
@@ -157,9 +158,14 @@ namespace Lumen.Infrastructure.Services
 
         public async Task<bool> DeletePhotoByIdAsync(int id)
         {
-            var photo = await _dbContext.Photos.FindAsync(id);
+            var photo = await _dbContext.Photos
+                .Include(p => p.Tags)
+                .FirstOrDefaultAsync(p => p.Id == id);
             if (photo is null)
                 return false;
+
+            var tagsToCheck = photo.Tags.ToList();
+
             string absoluteFilePath = Path.GetFullPath(photo.StoredFilePath);
             if (File.Exists(absoluteFilePath))
                 File.Delete(absoluteFilePath);
@@ -171,6 +177,18 @@ namespace Lumen.Infrastructure.Services
             }
             _dbContext.Photos.Remove(photo);
             await _dbContext.SaveChangesAsync();
+
+            foreach (Tag tag in tagsToCheck)
+            {
+                var remainingPhotosWithTag = await _dbContext.Photos.AnyAsync(p => p.Tags.Any(t => t.Id == tag.Id));
+                if (!remainingPhotosWithTag)
+                {
+                    _dbContext.Tags.Remove(tag);
+                }
+            }
+
+            await _dbContext.SaveChangesAsync();
+
             return true;
         }
 

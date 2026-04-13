@@ -27,7 +27,7 @@ namespace Lumen.Api.Controllers
             }
 
             await using Stream fileStream = file.OpenReadStream();
-            PhotoDto photo = await _photoService.UploadPhotoAsync(fileStream, file.FileName, file.Length);
+            PhotoDto photo = await _photoService.UploadPhotoAsync(fileStream, file.FileName, file.Length, file.ContentType);
 
             return StatusCode(StatusCodes.Status201Created, photo);
         }
@@ -120,13 +120,6 @@ namespace Lumen.Api.Controllers
             if (updatedPhoto is null)
                 return NotFound("Photo not found.");
             return Ok(updatedPhoto);
-        }
-
-        [HttpGet("tags")]
-        public async Task<ActionResult<List<TagDto>>> GetTags()
-        {
-            var tags = await _photoService.GetTagsAsync();
-            return Ok(tags);
         }
     }
 }
