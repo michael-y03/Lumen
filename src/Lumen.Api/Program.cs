@@ -30,6 +30,14 @@ namespace Lumen.Api
             app.UseSwagger();
             app.UseSwaggerUI();
 
+            app.UseExceptionHandler(appBuilder =>
+            {
+                appBuilder.Run(async context => { 
+                    context.Response.StatusCode = 500; 
+                    context.Response.ContentType = "application/json"; 
+                    await context.Response.WriteAsync("{\"error\":\"An unexpected error occurred.\"}"); });
+            });
+
             app.UseHttpsRedirection();
             app.UseAuthorization();
             app.MapControllers();

@@ -11,6 +11,7 @@ namespace Lumen.Api.Controllers
     public class PhotosController : ControllerBase
     {
         private readonly IPhotoService _photoService;
+        private static readonly List<string> allowedMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/bmp", "image/tiff"];
 
         public PhotosController(IPhotoService photoService)
         {
@@ -26,6 +27,15 @@ namespace Lumen.Api.Controllers
                 return BadRequest("No file was uploaded.");
             }
 
+            if (!allowedMimeTypes.Contains(file.ContentType))
+            {
+                return BadRequest("Unsupported file type. Allowed types are: JPEG, PNG, WebP, BMP, TIFF.");
+            }
+
+            if (file.Length > 100 * 1024 * 1024)
+            {
+                return BadRequest("File size exceeds the maximum allowed size of 100 MB.");
+            }
             await using Stream fileStream = file.OpenReadStream();
             PhotoDto photo = await _photoService.UploadPhotoAsync(fileStream, file.FileName, file.Length, file.ContentType);
 
@@ -48,6 +58,12 @@ namespace Lumen.Api.Controllers
             {
                 return BadRequest("Page and page size must be greater than zero.");
             }
+
+            if (from > to)
+            {
+                return BadRequest("The 'from' date cannot be later than the 'to' date.");
+            }
+
             var photos = await _photoService.GetPhotosAsync(page, pageSize, tag, camera, from, to, q, sort, order);
             return Ok(photos);
         }
