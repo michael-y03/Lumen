@@ -120,8 +120,52 @@ namespace Lumen.Tests
             Assert.Single(verifyContext.Tags);
         }
 
+        [Fact]
+        public async Task RemoveTagFromPhotoByIdAsync_WhenTagIsNoLongerUsed_DeletesTag()
+        {
+            DbContextOptions<LumenDbContext> options = new DbContextOptionsBuilder<LumenDbContext>()
+                .UseInMemoryDatabase(databaseName: "RemoveTagFromPhotoByIdAsync_WhenTagIsNoLongerUsed_DeletesTag")
+                .Options;
+            var dbContext = new LumenDbContext(options);
 
+            Tag tag = new Tag();
+            tag.Name = "edinburgh";
 
+            Photo photo = new Photo();
+            photo.OriginalFileName = "test.jpg";
+            photo.FileExtension = ".jpg";
+            photo.MimeType = "image/jpeg";
+            photo.StoredFilePath = "/photos/test.jpg";
+            photo.FileHash = "abc123";
+            photo.FileSizeBytes = 1024;
+            photo.DateImported = DateTime.UtcNow;
+            photo.Tags.Add(tag);
+
+            dbContext.Photos.Add(photo);
+            dbContext.Tags.Add(tag);
+            await dbContext.SaveChangesAsync();
+
+            DummyFileStorageService storageService = new DummyFileStorageService();
+            DummyMetadataExtractor metadataExtractor = new DummyMetadataExtractor();
+            DummyThumbnailService thumbnailService = new DummyThumbnailService();
+
+            PhotoService service = new PhotoService(storageService, dbContext, metadataExtractor, thumbnailService);
+
+            var result = await service.RemoveTagFromPhotoByIdAsync(photo.Id, "edinburgh");
+
+            Assert.NotNull(result);
+            Assert.Empty(result.Tags);
+
+            var verifyContext = new LumenDbContext(options);
+
+            var photoWithTags = await verifyContext.Photos
+                .Include(p => p.Tags)
+                .FirstOrDefaultAsync(p => p.Id == photo.Id);
+
+            Assert.NotNull(photoWithTags);
+            Assert.Empty(photoWithTags.Tags);
+            Assert.Empty(verifyContext.Tags);
+        }
     }
 
     public class DummyFileStorageService : IFileStorageService
