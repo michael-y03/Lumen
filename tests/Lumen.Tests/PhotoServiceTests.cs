@@ -10,8 +10,32 @@ using Lumen.Application.Dtos;
 
 namespace Lumen.Tests
 {
-    public class PhotoServiceTagTests
+    public class PhotoServiceTests
     {
+
+        private static Photo CreatePhoto(string originalFileName, string storedFilePath, string fileHash, long fileSizeBytes = 1024)
+        {
+            Photo photo = new Photo();
+            photo.OriginalFileName = originalFileName;
+            photo.FileExtension = ".jpg";
+            photo.MimeType = "image/jpeg";
+            photo.StoredFilePath = storedFilePath;
+            photo.FileHash = fileHash;
+            photo.FileSizeBytes = fileSizeBytes;
+            photo.DateImported = DateTime.UtcNow;
+
+            return photo;
+        }
+
+        private static PhotoService CreatePhotoService(LumenDbContext dbContext)
+        {
+            DummyFileStorageService storageService = new DummyFileStorageService();
+            DummyMetadataExtractor metadataExtractor = new DummyMetadataExtractor();
+            DummyThumbnailService thumbnailService = new DummyThumbnailService();
+
+            return new PhotoService(storageService, dbContext, metadataExtractor, thumbnailService);
+        }
+
         [Fact]
         public async Task AddTagToPhotoByIdAsync_WhenTagDoesNotExist_CreatesAndAssociatesTag()
         {
@@ -20,23 +44,12 @@ namespace Lumen.Tests
                 .Options;
             var dbContext = new LumenDbContext(options);
 
-            Photo photo = new Photo();
-            photo.OriginalFileName = "test.jpg";
-            photo.FileExtension = ".jpg";
-            photo.MimeType = "image/jpeg";
-            photo.StoredFilePath = "/photos/test.jpg";
-            photo.FileHash = "abc123";
-            photo.FileSizeBytes = 1024;
-            photo.DateImported = DateTime.UtcNow;
+            Photo photo = CreatePhoto("test.jpg", "/photos/test.jpg", "abc123");
 
             dbContext.Photos.Add(photo);
             await dbContext.SaveChangesAsync();
 
-            DummyFileStorageService storageService = new DummyFileStorageService();
-            DummyMetadataExtractor metadataExtractor = new DummyMetadataExtractor();
-            DummyThumbnailService thumbnailService = new DummyThumbnailService();
-
-            PhotoService service = new PhotoService(storageService, dbContext, metadataExtractor, thumbnailService);
+            PhotoService service = CreatePhotoService(dbContext);
 
             AddTagRequest request = new AddTagRequest { TagName = "Edinburgh" };
             var result = await service.AddTagToPhotoByIdAsync(photo.Id, request);
@@ -66,35 +79,18 @@ namespace Lumen.Tests
             Tag tag = new Tag();
             tag.Name = "edinburgh";
 
-            Photo existingTaggedPhoto = new Photo();
-            existingTaggedPhoto.OriginalFileName = "existingTaggedPhoto.jpg";
-            existingTaggedPhoto.FileExtension = ".jpg";
-            existingTaggedPhoto.MimeType = "image/jpeg";
-            existingTaggedPhoto.StoredFilePath = "/photos/existingTaggedPhoto.jpg";
-            existingTaggedPhoto.FileHash = "abc123";
-            existingTaggedPhoto.FileSizeBytes = 1024;
-            existingTaggedPhoto.DateImported = DateTime.UtcNow;
+            Photo existingTaggedPhoto = CreatePhoto("existingTaggedPhoto.jpg", "/photos/existingTaggedPhoto.jpg", "abc123");
             existingTaggedPhoto.Tags.Add(tag);
 
-            Photo targetPhoto = new Photo();
-            targetPhoto.OriginalFileName = "targetPhoto.jpg";
-            targetPhoto.FileExtension = ".jpg";
-            targetPhoto.MimeType = "image/jpeg";
-            targetPhoto.StoredFilePath = "/photos/targetPhoto.jpg";
-            targetPhoto.FileHash = "def456";
-            targetPhoto.FileSizeBytes = 2048;
-            targetPhoto.DateImported = DateTime.UtcNow;
+            Photo targetPhoto = CreatePhoto("targetPhoto.jpg", "/photos/targetPhoto.jpg", "def456", 2048);
+
 
             dbContext.Photos.Add(existingTaggedPhoto);
             dbContext.Photos.Add(targetPhoto);
             dbContext.Tags.Add(tag);
             await dbContext.SaveChangesAsync();
 
-            DummyFileStorageService storageService = new DummyFileStorageService();
-            DummyMetadataExtractor metadataExtractor = new DummyMetadataExtractor();
-            DummyThumbnailService thumbnailService = new DummyThumbnailService();
-
-            PhotoService service = new PhotoService(storageService, dbContext, metadataExtractor, thumbnailService);
+            PhotoService service = CreatePhotoService(dbContext);
 
             AddTagRequest request = new AddTagRequest { TagName = "Edinburgh" };
             var result = await service.AddTagToPhotoByIdAsync(targetPhoto.Id, request);
@@ -131,25 +127,14 @@ namespace Lumen.Tests
             Tag tag = new Tag();
             tag.Name = "edinburgh";
 
-            Photo photo = new Photo();
-            photo.OriginalFileName = "test.jpg";
-            photo.FileExtension = ".jpg";
-            photo.MimeType = "image/jpeg";
-            photo.StoredFilePath = "/photos/test.jpg";
-            photo.FileHash = "abc123";
-            photo.FileSizeBytes = 1024;
-            photo.DateImported = DateTime.UtcNow;
+            Photo photo = CreatePhoto("test.jpg", "/photos/test.jpg", "abc123");
             photo.Tags.Add(tag);
 
             dbContext.Photos.Add(photo);
             dbContext.Tags.Add(tag);
             await dbContext.SaveChangesAsync();
 
-            DummyFileStorageService storageService = new DummyFileStorageService();
-            DummyMetadataExtractor metadataExtractor = new DummyMetadataExtractor();
-            DummyThumbnailService thumbnailService = new DummyThumbnailService();
-
-            PhotoService service = new PhotoService(storageService, dbContext, metadataExtractor, thumbnailService);
+            PhotoService service = CreatePhotoService(dbContext);
 
             var result = await service.RemoveTagFromPhotoByIdAsync(photo.Id, "edinburgh");
 
@@ -165,6 +150,39 @@ namespace Lumen.Tests
             Assert.NotNull(photoWithTags);
             Assert.Empty(photoWithTags.Tags);
             Assert.Empty(verifyContext.Tags);
+        }
+
+        [Fact]
+        public async Task GetPhotosAsync_WhenTagIsProvided_ReturnsOnlyMatchingPhotos()
+        {
+            DbContextOptions<LumenDbContext> options = new DbContextOptionsBuilder<LumenDbContext>()
+                .UseInMemoryDatabase(databaseName: "GetPhotosAsync_WhenTagIsProvided_ReturnsOnlyMatchingPhotos")
+                .Options;
+            var dbContext = new LumenDbContext(options);
+
+            Tag tag = new Tag();
+            tag.Name = "edinburgh";
+
+            Photo matchingPhoto = CreatePhoto("matchingPhoto.jpg", "/photos/matchingPhoto.jpg", "abc123");
+            matchingPhoto.Tags.Add(tag);
+
+            Photo nonMatchingPhoto = CreatePhoto("nonMatchingPhoto.jpg", "/photos/nonMatchingPhoto.jpg", "def456", 2048);
+
+            dbContext.Photos.Add(matchingPhoto);
+            dbContext.Photos.Add(nonMatchingPhoto);
+            dbContext.Tags.Add(tag);
+            await dbContext.SaveChangesAsync();
+
+            PhotoService service = CreatePhotoService(dbContext);
+            var result = await service.GetPhotosAsync(1, 20, "edinburgh");
+
+            Assert.NotNull(result);
+            Assert.Equal(1, result.TotalCount);
+
+            var returnedPhoto = Assert.Single(result.Items);
+            Assert.Equal(matchingPhoto.Id, returnedPhoto.Id);
+            Assert.Contains("edinburgh", returnedPhoto.Tags);
+
         }
     }
 
