@@ -182,9 +182,70 @@ namespace Lumen.Tests
             var returnedPhoto = Assert.Single(result.Items);
             Assert.Equal(matchingPhoto.Id, returnedPhoto.Id);
             Assert.Contains("edinburgh", returnedPhoto.Tags);
+        }
 
+        [Fact]
+        public async Task GetPhotosAsync_WhenQueryMatchesFileName_ReturnsOnlyMatchingPhotos()
+        {
+            DbContextOptions<LumenDbContext> options = new DbContextOptionsBuilder<LumenDbContext>()
+                .UseInMemoryDatabase(databaseName: "GetPhotosAsync_WhenQueryMatchesFileName_ReturnsOnlyMatchingPhotos")
+                .Options;
+            var dbContext = new LumenDbContext(options);
+
+            Photo matchingPhoto = CreatePhoto("edinburgh-castle.jpg", "/photos/edinburgh-castle.jpg", "abc123");
+            Photo nonMatchingPhoto = CreatePhoto("london-bridge.jpg", "/photos/london-bridge.jpg", "def456", 2048);
+
+            dbContext.Photos.Add(matchingPhoto);
+            dbContext.Photos.Add(nonMatchingPhoto);
+            await dbContext.SaveChangesAsync();
+
+            PhotoService service = CreatePhotoService(dbContext);
+
+            var result = await service.GetPhotosAsync(1, 20, q: "edinburgh");
+
+            Assert.NotNull(result);
+            Assert.Equal(1, result.TotalCount);
+
+            var returnedPhoto = Assert.Single(result.Items);
+            Assert.Equal(matchingPhoto.Id, returnedPhoto.Id);
+            Assert.Equal("edinburgh-castle.jpg", returnedPhoto.OriginalFileName);
+        }
+
+        [Fact]
+        public async Task GetPhotosAsync_WhenQueryMatchesTagName_ReturnsOnlyMatchingPhotos()
+        {
+            DbContextOptions<LumenDbContext> options = new DbContextOptionsBuilder<LumenDbContext>()
+                .UseInMemoryDatabase(databaseName: "GetPhotosAsync_WhenQueryMatchesTagName_ReturnsOnlyMatchingPhotos")
+                .Options;
+            var dbContext = new LumenDbContext(options);
+
+            Tag tag = new Tag();
+            tag.Name = "edinburgh";
+
+            Photo matchingPhoto = CreatePhoto("castle.jpg", "/photos/castle.jpg", "abc123");
+            matchingPhoto.Tags.Add(tag);
+
+            Photo nonMatchingPhoto = CreatePhoto("bridge.jpg", "/photos/bridge.jpg", "def456", 2048);
+
+            dbContext.Photos.Add(matchingPhoto);
+            dbContext.Photos.Add(nonMatchingPhoto);
+            dbContext.Tags.Add(tag);
+            await dbContext.SaveChangesAsync();
+
+            PhotoService service = CreatePhotoService(dbContext);
+
+            var result = await service.GetPhotosAsync(1, 20, q: "edinburgh");
+
+            Assert.NotNull(result);
+            Assert.Equal(1, result.TotalCount);
+
+            var returnedPhoto = Assert.Single(result.Items);
+            Assert.Equal(matchingPhoto.Id, returnedPhoto.Id);
+            Assert.Contains("edinburgh", returnedPhoto.Tags);
         }
     }
+
+
 
     public class DummyFileStorageService : IFileStorageService
     {
